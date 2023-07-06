@@ -16,6 +16,7 @@ variables:
   testProjectName: 'test\Microsoft.Azure.WebJobs.Extensions.OpenApi.Core.Tests'
   testAssamblyName: 'Microsoft.Azure.WebJobs.Extensions.OpenApi.Core.Tests.dll'
   projectName: 'src\Microsoft.Azure.WebJobs.Extensions.OpenApi.Core'
+  projectNamePack: 'Microsoft.Azure.WebJobs.Extensions.OpenApi.Core'
 
   testProjectNameMSBuild: ${{ replace(variables['testProjectName'], '.', '_') }}
   projectNameMSBuild: ${{ replace(variables['projectName'], '.', '_') }}
@@ -63,10 +64,10 @@ steps:
     platform: '$(buildPlatform)'
     configuration: '$(buildConfiguration)'
 - task: DotNetCoreCLI@2
-  displayName: 'Pack $(projectName)'
+  displayName: 'Pack $(projectNamePack)'
   inputs:
     command: 'pack'
-    packagesToPack: '**/$(projectName).csproj'
+    packagesToPack: '**/$(projectNamePack).csproj'
     nobuild: true
     includesymbols: true
     includesource: true
