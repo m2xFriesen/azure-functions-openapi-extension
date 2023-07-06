@@ -1,0 +1,87 @@
+# ASP.NET Core (.NET Framework)
+# Build and test ASP.NET Core projects targeting the full .NET Framework.
+# Add steps that publish symbols, save build artifacts, and more:
+# https://docs.microsoft.com/azure/devops/pipelines/languages/dotnet-core
+
+trigger:
+  - main
+
+pool:
+  vmImage: 'windows-2022'
+
+variables:
+  solution: 'Microsoft.Azure.WebJobs.Extensions.OpenApi.sln'
+  buildPlatform: 'Any CPU'
+  buildConfiguration: 'Release'
+  testProjectName: 'test\Microsoft.Azure.WebJobs.Extensions.OpenApi.Core.Tests'
+  testAssamblyName: 'Microsoft.Azure.WebJobs.Extensions.OpenApi.Core.Tests.dll'
+  projectName: 'src\Microsoft.Azure.WebJobs.Extensions.OpenApi.Core'
+
+  testProjectNameMSBuild: ${{ replace(variables['testProjectName'], '.', '_') }}
+  projectNameMSBuild: ${{ replace(variables['projectName'], '.', '_') }}
+
+name: $(Version)
+
+steps:
+
+### setup
+
+- task: NuGetToolInstaller@1
+  inputs:
+    versionSpec: 6.3.0
+- task: NuGetCommand@2
+  displayName: 'NuGet restore'
+  inputs:
+    command: 'restore'
+    restoreSolution: '$(solution)'
+    feedsToUse: 'config'
+- task: VSBuild@1
+  displayName: 'Build $(testProjectName)'
+  inputs:
+    solution: '$(solution)'
+    vsVersion: '17.0'
+    msbuildArgs: '/t:$(testProjectNameMSBuild)'
+    platform: '$(buildPlatform)'
+    configuration: '$(buildConfiguration)'
+- task: VSTest@2
+  displayName: 'Run $(testProjectName)'
+  inputs:
+    testSelector: 'testAssemblies'
+    testAssemblyVer2: |
+      **\$(testAssamblyName)
+      !**\obj\**
+      !**\ref\**
+    searchFolder: '$(System.DefaultWorkingDirectory)'
+    codeCoverageEnabled: true
+
+- task: VSBuild@1
+  displayName: 'Build $(projectName)'
+  inputs:
+    solution: '$(solution)'
+    vsVersion: '17.0'
+    msbuildArgs: '/t:$(projectNameMSBuild)'
+    platform: '$(buildPlatform)'
+    configuration: '$(buildConfiguration)'
+- task: DotNetCoreCLI@2
+  displayName: 'Pack $(projectName)'
+  inputs:
+    command: 'pack'
+    packagesToPack: '**/$(projectName).csproj'
+    nobuild: true
+    includesymbols: true
+    includesource: true
+    versioningScheme: 'byEnvVar'
+    versionEnvVar: 'Version'
+
+- task: PublishBuildArtifacts@1
+  displayName: 'Publish $(projectName)'
+  inputs:
+    PathtoPublish: '$(Build.ArtifactStagingDirectory)/$(packageIdServicesAzure).$(version).nupkg'
+    artifactName: 'drop'
+- task: NuGetCommand@2
+  displayName: "Publish NuGet-Packages"
+  inputs:
+    command: 'push'
+    packagesToPush: '$(Build.ArtifactStagingDirectory)/**/*.nupkg;!$(Build.ArtifactStagingDirectory)/**/*.symbols.nupkg'
+    nuGetFeedType: 'internal'
+    publishVstsFeed: 'cc1f80e6-7dc2-4ad1-9bc8-1063be167fcd/81847149-ba3b-4479-b164-579bd207dc52'
